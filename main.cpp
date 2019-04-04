@@ -183,7 +183,7 @@ void DrawTextRotated(HDC dc, const TCHAR* text, int x, int y, int rotation)
 	SetGraphicsMode(dc, GM_ADVANCED);
 	SetMapMode(dc, MM_ISOTROPIC);
 	SetWindowExtEx(dc, 1000, 1000, nullptr);
-	SetViewportExtEx(dc, 1000, 1000, nullptr);
+	SetViewportExtEx(dc, 500, 500, nullptr);
 
 	auto radians = rotation * PI / 180.0f;
 
@@ -204,9 +204,9 @@ void DrawTextRotated(HDC dc, const TCHAR* text, int x, int y, int rotation)
 
 	RECT rect;
 	rect.left = 0;
-	rect.right = 1000;
+	rect.right = 10000;
 	rect.top = 0;
-	rect.bottom = 60;
+	rect.bottom = 10000;
 	DrawText(dc, text, -1, &rect, DT_CALCRECT);
 
 	auto width = rect.right - rect.left;
