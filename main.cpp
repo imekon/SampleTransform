@@ -1,3 +1,9 @@
+//
+// This is loosely based on this:
+// https://docs.microsoft.com/en-us/cpp/windows/walkthrough-creating-windows-desktop-applications-cpp?view=vs-2019
+//
+// Pete Goodwin 04/04/19
+
 #include <windows.h>
 #include <tchar.h>
 #include <math.h>
@@ -85,7 +91,7 @@ void TransformAndDraw(HWND hWnd, HDC dc)
     SetWorldTransform(dc, &xForm); 
  
 	oldFont = SelectObject(dc, hFont);
-	TextOut(dc, 10, 100, greeting, _tcsclen(greeting));
+	TextOut(dc, 0, 0, greeting, _tcsclen(greeting));
 	SelectObject(dc, oldFont);
 	
 	// Find the midpoint of the client area.  
@@ -116,27 +122,101 @@ void TransformAndDraw(HWND hWnd, HDC dc)
  
     // Draw the horizontal lines.  
  
-    MoveToEx(dc, (rect.right/2 - 150), (rect.bottom / 2 + 0), NULL); 
+    MoveToEx(dc, (rect.right/2 - 150), (rect.bottom / 2 + 0), nullptr); 
     LineTo(dc, (rect.right / 2 - 16), (rect.bottom / 2 + 0)); 
  
-    MoveToEx(dc, (rect.right / 2 - 13), (rect.bottom / 2 + 0), NULL); 
+    MoveToEx(dc, (rect.right / 2 - 13), (rect.bottom / 2 + 0), nullptr); 
     LineTo(dc, (rect.right / 2 + 13), (rect.bottom / 2 + 0)); 
  
-    MoveToEx(dc, (rect.right / 2 + 16), (rect.bottom / 2 + 0), NULL); 
+    MoveToEx(dc, (rect.right / 2 + 16), (rect.bottom / 2 + 0), nullptr); 
     LineTo(dc, (rect.right / 2 + 150), (rect.bottom / 2 + 0)); 
  
     // Draw the vertical lines.  
  
-    MoveToEx(dc, (rect.right/2 + 0), (rect.bottom / 2 - 150), NULL); 
+    MoveToEx(dc, (rect.right/2 + 0), (rect.bottom / 2 - 150), nullptr); 
     LineTo(dc, (rect.right / 2 + 0), (rect.bottom / 2 - 16)); 
  
-    MoveToEx(dc, (rect.right / 2 + 0), (rect.bottom / 2 - 13), NULL); 
+    MoveToEx(dc, (rect.right / 2 + 0), (rect.bottom / 2 - 13), nullptr); 
     LineTo(dc, (rect.right / 2 + 0), (rect.bottom / 2 + 13)); 
  
-    MoveToEx(dc, (rect.right / 2 + 0), (rect.bottom / 2 + 16), NULL); 
+    MoveToEx(dc, (rect.right / 2 + 0), (rect.bottom / 2 + 16), nullptr); 
     LineTo(dc, (rect.right / 2 + 0), (rect.bottom / 2 + 150));
 
 	ObliqueTextOut(dc, 30, 10, 10, greeting);
+}
+
+void TransformText(HDC dc, const TCHAR* text, bool transform)
+{
+	if (transform)
+	{
+		XFORM xForm;
+
+		SetGraphicsMode(dc, GM_ADVANCED);
+		SetMapMode(dc, MM_ISOTROPIC);
+
+		// Set the appropriate world transformation (ROTATE)
+
+		xForm.eM11 = (FLOAT) 0.8660 * 4.0;
+		xForm.eM12 = (FLOAT) 0.5000;
+		xForm.eM21 = (FLOAT)-0.5000;
+		xForm.eM22 = (FLOAT) 0.8660 * 4.0;
+		xForm.eDx = (FLOAT) 100.0;
+		xForm.eDy = (FLOAT)-500.0;
+		SetWorldTransform(dc, &xForm);
+	}
+
+	auto oldFont = SelectObject(dc, hFont);
+	//TextOut(dc, 0, 0, text, _tcsclen(text));
+	RECT rect;
+	rect.left = 0;
+	rect.right = 1000;
+	rect.top = 0;
+	rect.bottom = 60;
+	DrawText(dc, text, -1, &rect, DT_TOP | DT_CENTER);
+	SelectObject(dc, oldFont);
+}
+
+void DrawTextRotated(HDC dc, const TCHAR* text, int x, int y, int rotation)
+{
+	XFORM xForm;
+
+	SetGraphicsMode(dc, GM_ADVANCED);
+	SetMapMode(dc, MM_ISOTROPIC);
+	SetWindowExtEx(dc, 1000, 1000, nullptr);
+	SetViewportExtEx(dc, 1000, 1000, nullptr);
+
+	auto radians = rotation * PI / 180.0f;
+
+	// Set the appropriate world transformation (ROTATE)
+
+	xForm.eM11 = cosf(radians);
+	xForm.eM12 = sinf(radians);
+	xForm.eM21 = -xForm.eM12;
+	xForm.eM22 = xForm.eM11;
+	xForm.eDx = (FLOAT)x;
+	xForm.eDy = (FLOAT)y;
+	SetWorldTransform(dc, &xForm);
+
+	MoveToEx(dc, x - 100, y, nullptr);
+	LineTo(dc, x + 100, y);
+	MoveToEx(dc, x, y - 100, nullptr);
+	LineTo(dc, x, y + 100);
+
+	RECT rect;
+	rect.left = 0;
+	rect.right = 1000;
+	rect.top = 0;
+	rect.bottom = 60;
+	DrawText(dc, text, -1, &rect, DT_CALCRECT);
+
+	auto width = rect.right - rect.left;
+	auto height = rect.bottom - rect.top;
+
+	rect.left = x - width / 2;
+	rect.right = rect.left + width;
+	rect.top = y - height / 2;
+	rect.bottom = rect.top + height;
+	DrawText(dc, text, -1, &rect, DT_TOP | DT_CENTER);
 }
 
 LRESULT CALLBACK WndProc(
@@ -153,7 +233,9 @@ LRESULT CALLBACK WndProc(
 	{
 	case WM_PAINT:
 		hdc = BeginPaint(hwnd, &ps);
-		TransformAndDraw(hwnd, hdc);
+		//TransformAndDraw(hwnd, hdc);
+		//TransformText(hdc, greeting, false);
+		DrawTextRotated(hdc, greeting, 400, 10, 90);
 		EndPaint(hwnd, &ps);
 		break;
 
@@ -205,7 +287,7 @@ int CALLBACK WinMain(
 		windowTitle,
 		WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT, CW_USEDEFAULT,
-		500, 100,
+		800, 600,
 		nullptr,
 		nullptr,
 		hInstance,
